@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "*.tcc": "cpp",
+        "*.cu": "cpp",
+        "driver.h": "c",
+        "*.tmh": "c",
+        "wdf.h": "c"
+    },
+    "cSpell.words": [
+        "NTSTATUS"
+    ]
+}

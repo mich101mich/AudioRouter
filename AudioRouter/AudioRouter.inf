@@ -1,0 +1,86 @@
+;
+; AudioRouter.inf
+;
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=Sample ; TODO: edit Class
+ClassGuid={78A1C341-4539-11d3-B88D-00C04FAD5171} ; TODO: edit ClassGuid
+Provider=%ManufacturerName%
+CatalogFile=AudioRouter.cat
+DriverVer= ; TODO: set DriverVer in stampinf property pages
+
+[DestinationDirs]
+DefaultDestDir = 12
+AudioRouter_Device_CoInstaller_CopyFiles = 11
+
+; ================= Class section =====================
+
+[ClassInstall32]
+Addreg=SampleClassReg
+
+[SampleClassReg]
+HKR,,,0,%ClassName%
+HKR,,Icon,,-5
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+AudioRouter.sys  = 1,,
+WdfCoInstaller$KMDFCOINSTALLERVERSION$.dll=1 ; make sure the number matches with SourceDisksNames
+
+;*****************************************
+; Install Section
+;*****************************************
+
+[Manufacturer]
+%ManufacturerName%=Standard,NT$ARCH$
+
+[Standard.NT$ARCH$]
+%AudioRouter.DeviceDesc%=AudioRouter_Device, Root\AudioRouter ; TODO: edit hw-id
+
+[AudioRouter_Device.NT]
+CopyFiles=Drivers_Dir
+
+[Drivers_Dir]
+AudioRouter.sys
+
+;-------------- Service installation
+[AudioRouter_Device.NT.Services]
+AddService = AudioRouter,%SPSVCINST_ASSOCSERVICE%, AudioRouter_Service_Inst
+
+; -------------- AudioRouter driver install sections
+[AudioRouter_Service_Inst]
+DisplayName    = %AudioRouter.SVCDESC%
+ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
+StartType      = 3               ; SERVICE_DEMAND_START
+ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\AudioRouter.sys
+
+;
+;--- AudioRouter_Device Coinstaller installation ------
+;
+
+[AudioRouter_Device.NT.CoInstallers]
+AddReg=AudioRouter_Device_CoInstaller_AddReg
+CopyFiles=AudioRouter_Device_CoInstaller_CopyFiles
+
+[AudioRouter_Device_CoInstaller_AddReg]
+HKR,,CoInstallers32,0x00010000, "WdfCoInstaller$KMDFCOINSTALLERVERSION$.dll,WdfCoInstaller"
+
+[AudioRouter_Device_CoInstaller_CopyFiles]
+WdfCoInstaller$KMDFCOINSTALLERVERSION$.dll
+
+[AudioRouter_Device.NT.Wdf]
+KmdfService =  AudioRouter, AudioRouter_wdfsect
+[AudioRouter_wdfsect]
+KmdfLibraryVersion = $KMDFVERSION$
+
+[Strings]
+SPSVCINST_ASSOCSERVICE= 0x00000002
+ManufacturerName="<Your manufacturer name>" ;TODO: Replace with your manufacturer name
+ClassName="Samples" ; TODO: edit ClassName
+DiskName = "AudioRouter Installation Disk"
+AudioRouter.DeviceDesc = "AudioRouter Device"
+AudioRouter.SVCDESC = "AudioRouter Service"
