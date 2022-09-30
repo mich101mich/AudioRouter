@@ -3,7 +3,7 @@
 use std::io::{Read, Write};
 
 fn main() {
-    let dev_name = "\\??\\ROOT#SAMPLE#0000#{c9b7d8ce-7a5f-4165-b0f9-ee1a683cfbd8}";
+    let dev_name = "\\??\\ROOT#MEDIA#0000#{c9b7d8ce-7a5f-4165-b0f9-ee1a683cfbd8}";
 
     println!("Opening device");
     let mut file = std::fs::OpenOptions::new()
@@ -23,6 +23,7 @@ fn main() {
     file.read_exact(unsafe { s.as_bytes_mut() }).unwrap();
 
     println!("Read first 5 bytes: {}", s);
+    assert_eq!(s, &input[..5]);
 
     file.read_to_string(&mut s).unwrap();
     println!("Read everything: {}", s);
