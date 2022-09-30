@@ -1,0 +1,18 @@
+[env]
+APP_NAME = "AudioRouterApp"
+
+[env.development]
+TARGET_PATH = "target/debug"
+OUTPUT_PATH = "x64/Debug"
+
+[env.production]
+TARGET_PATH = "target/release"
+OUTPUT_PATH = "x64/Release"
+BUILD_RELEASE = "--release"
+
+[tasks.deploy]
+dependencies = ["build"]
+script = '''
+cp %TARGET_PATH%/%APP_NAME%.exe ../%OUTPUT_PATH%/
+cp %TARGET_PATH%/%APP_NAME%.pdb ../%OUTPUT_PATH%/
+'''

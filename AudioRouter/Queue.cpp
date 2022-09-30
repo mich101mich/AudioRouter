@@ -21,38 +21,57 @@ Environment:
 #pragma alloc_text (PAGE, AudioRouterQueueInitialize)
 #endif
 
-#define TRACE_FILE TRACE_QUEUE
+void log_err_queue(const char* call, const char* func, unsigned int line, NTSTATUS status)
+{
+    TraceEvents(TRACE_LEVEL_ERROR, TRACE_QUEUE, "%s in %s (%s:%d) failed with status %!STATUS!", call, func, __FILE__, line, status);
+}
+#define TRY(expr) { NTSTATUS status = (expr); if (!NT_SUCCESS(status)) { log_err_queue(#expr, __FUNCTION__, __LINE__, status); return status; } }
 
-/**
- * The I/O dispatch callbacks for the frameworks device object
- * are configured in this function.
- *
- * A single default I/O Queue is configured for parallel request
- * processing, and a driver context memory allocation is created
- * to hold our structure QUEUE_CONTEXT.
- *
- * @param Device Handle to a framework device object.
- * @return NTSTATUS
- */
+void ClearContext(PQUEUE_CONTEXT context)
+{
+    if (context->data != NULL)
+    {
+        ExFreePoolWithTag(context->data, QUEUE_POOL_TAG);
+        context->data = NULL;
+    }
+    context->offset = 0;
+    context->remaining = 0;
+}
+
+VOID AudioRouterEvtQueueContextCleanup(_In_ WDFOBJECT Object)
+{
+    PQUEUE_CONTEXT context = QueueGetContext(Object);
+    ClearContext(context);
+}
+
 NTSTATUS AudioRouterQueueInitialize(_In_ WDFDEVICE Device)
 {
-    WDFQUEUE queue;
-    NTSTATUS status;
-    WDF_IO_QUEUE_CONFIG queueConfig;
-
     PAGED_CODE();
 
     // Configure a default queue so that requests that are not
-    // configure-fowarded using WdfDeviceConfigureRequestDispatching to goto
+    // configure-forwarded using WdfDeviceConfigureRequestDispatching to goto
     // other queues get dispatched here.
-    WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&queueConfig, WdfIoQueueDispatchParallel);
-
+    WDF_IO_QUEUE_CONFIG queueConfig;
+    WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&queueConfig, WdfIoQueueDispatchSequential);
+    queueConfig.DefaultQueue = TRUE;
+    queueConfig.EvtIoDefault = AudioRouterEvtIoDefault;
     queueConfig.EvtIoDeviceControl = AudioRouterEvtIoDeviceControl;
     queueConfig.EvtIoStop = AudioRouterEvtIoStop;
+    queueConfig.EvtIoRead = AudioRouterEvtIoRead;
+    queueConfig.EvtIoWrite = AudioRouterEvtIoWrite;
 
-    status = WdfIoQueueCreate(Device, &queueConfig, WDF_NO_OBJECT_ATTRIBUTES, &queue);
+    WDF_OBJECT_ATTRIBUTES queueAttributes;
+    WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&queueAttributes, QUEUE_CONTEXT);
+    queueAttributes.EvtCleanupCallback = AudioRouterEvtQueueContextCleanup;
 
-    return status;
+    WDFQUEUE queue;
+    TRY(WdfIoQueueCreate(Device, &queueConfig, &queueAttributes, &queue));
+
+    PQUEUE_CONTEXT context = QueueGetContext(queue);
+    context->data = NULL;
+    ClearContext(context);
+
+    return STATUS_SUCCESS;
 }
 
 /**
@@ -78,8 +97,89 @@ VOID AudioRouterEvtIoDeviceControl(
                 Queue, Request, (int) OutputBufferLength, (int) InputBufferLength, IoControlCode);
 
     WdfRequestComplete(Request, STATUS_SUCCESS);
+}
 
-    return;
+NTSTATUS AudioRouterEvtIoWrite_impl(_In_ WDFQUEUE Queue, _In_ WDFREQUEST Request, _In_ size_t Length)
+{
+    PQUEUE_CONTEXT context = QueueGetContext(Queue);
+    size_t new_len = context->remaining + Length;
+    BYTE* new_data = (BYTE*)ExAllocatePoolWithTag(NonPagedPool, new_len, QUEUE_POOL_TAG);
+    if (new_data == NULL)
+    {
+        TraceEvents(TRACE_LEVEL_ERROR, TRACE_QUEUE, "%!FUNC! ExAllocatePoolWithTag failed");
+        return STATUS_INSUFFICIENT_RESOURCES;
+    }
+
+    if (context->remaining > 0)
+    {
+        RtlCopyMemory(new_data, context->data + context->offset, context->remaining);
+        ClearContext(context);
+    }
+
+    WDFMEMORY memory;
+    TRY(WdfRequestRetrieveInputMemory(Request, &memory));
+    TRY(WdfMemoryCopyToBuffer(memory, 0, new_data + context->remaining, Length));
+
+    context->data = new_data;
+    context->remaining = new_len;
+    context->offset = 0;
+
+    size_t bytes_written = Length;
+    WdfRequestSetInformation(Request, bytes_written);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_QUEUE, "%!FUNC! Wrote %d/%d bytes", (int) bytes_written, (int) Length);
+
+    return STATUS_SUCCESS;
+}
+
+VOID AudioRouterEvtIoWrite(_In_ WDFQUEUE Queue, _In_ WDFREQUEST Request, _In_ size_t Length)
+{
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_QUEUE, "<%!FUNC! Length=%d>", (int) Length);
+
+    NTSTATUS status = AudioRouterEvtIoWrite_impl(Queue, Request, Length);
+
+    WdfRequestComplete(Request, status);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_QUEUE, "</%!FUNC!>");
+}
+
+NTSTATUS AudioRouterEvtIoRead_impl(_In_ WDFQUEUE Queue, _In_ WDFREQUEST Request, _In_ size_t Length)
+{
+    PQUEUE_CONTEXT context = QueueGetContext(Queue);
+    if (context->data == NULL)
+    {
+        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_QUEUE, "%!FUNC! data is NULL");
+        return STATUS_END_OF_FILE;
+    }
+
+    size_t bytes_read = min(context->remaining, Length);
+
+    WDFMEMORY memory;
+    TRY(WdfRequestRetrieveOutputMemory(Request, &memory));
+    TRY(WdfMemoryCopyFromBuffer(memory, 0, context->data + context->offset, bytes_read));
+
+    context->offset += bytes_read;
+    context->remaining -= bytes_read;
+
+    if (context->remaining == 0)
+    {
+        ClearContext(context);
+    }
+
+    WdfRequestSetInformation(Request, bytes_read);
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_QUEUE, "%!FUNC! Read %d/%d bytes. %d remaining in buffer", (int) bytes_read, (int) Length, (int) context->remaining);
+
+    return STATUS_SUCCESS;
+}
+
+VOID AudioRouterEvtIoRead(_In_ WDFQUEUE Queue, _In_ WDFREQUEST Request, _In_ size_t Length)
+{
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_QUEUE, "<%!FUNC! Length=%d>", (int) Length);
+
+    NTSTATUS status = AudioRouterEvtIoRead_impl(Queue, Request, Length);
+
+    WdfRequestComplete(Request, status);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_QUEUE, "</%!FUNC!>");
 }
 
 /**
@@ -101,6 +201,9 @@ VOID AudioRouterEvtIoStop(
                 TRACE_QUEUE,
                 "%!FUNC! Queue 0x%p, Request 0x%p ActionFlags %d",
                 Queue, Request, ActionFlags);
+
+    // PQUEUE_CONTEXT context = QueueGetContext(Queue);
+    // ClearContext(context);
 
     //
     // In most cases, the EvtIoStop callback function completes, cancels, or postpones
@@ -139,6 +242,40 @@ VOID AudioRouterEvtIoStop(
     // or another low system power state. In extreme cases, it can cause the system
     // to crash with bugcheck code 9F.
     //
+}
 
-    return;
+VOID AudioRouterEvtIoDefault(_In_ WDFQUEUE Queue, _In_ WDFREQUEST Request)
+{
+    UNREFERENCED_PARAMETER(Queue);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_QUEUE, "<%!FUNC!>");
+
+    WDF_REQUEST_PARAMETERS params;
+    WdfRequestGetParameters(Request, &params);
+
+    NTSTATUS status = STATUS_SUCCESS;
+
+    switch (params.Type)
+    {
+    case WdfRequestTypeCreate:
+        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_QUEUE, "WdfRequestTypeCreate");
+        break;
+    case WdfRequestTypeRead:
+        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_QUEUE, "WdfRequestTypeRead");
+        status = AudioRouterEvtIoRead_impl(Queue, Request, params.Parameters.Read.Length);
+        break;
+    case WdfRequestTypeWrite:
+        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_QUEUE, "WdfRequestTypeWrite");
+        status = AudioRouterEvtIoWrite_impl(Queue, Request, params.Parameters.Write.Length);
+        break;
+    case WdfRequestTypeDeviceControl:
+        TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_QUEUE, "WdfRequestTypeDeviceControl");
+        break;
+    default:
+        TraceEvents(TRACE_LEVEL_ERROR, TRACE_QUEUE, "WdfRequestTypeUnknown: %x", (int)params.Type);
+    }
+
+    WdfRequestComplete(Request, status);
+
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_QUEUE, "</%!FUNC!>");
 }

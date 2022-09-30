@@ -11,5 +11,8 @@
     <DeployFiles />
     <ScriptName>Microsoft.DriverKit.DefaultDriverPackageInstallationClass.PerformDefaultDriverPackageInstallation</ScriptName>
     <ScriptDeviceQuery />
+    <DebuggerFlavor>DbgengRemoteDebugger</DebuggerFlavor>
+    <DbgengRemoteCommand>C:\DriverTest\Drivers\AudioRouterApp.exe</DbgengRemoteCommand>
+    <DbgengRemoteWorkingDirectory>C:\DriverTest\Drivers</DbgengRemoteWorkingDirectory>
   </PropertyGroup>
 </Project>

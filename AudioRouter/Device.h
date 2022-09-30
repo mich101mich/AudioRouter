@@ -45,4 +45,6 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(DEVICE_CONTEXT, DeviceGetContext)
  */
 NTSTATUS AudioRouterCreateDevice(_Inout_ PWDFDEVICE_INIT DeviceInit);
 
+EVT_WDF_DEVICE_CONTEXT_CLEANUP AudioRouterEvtDeviceContextCleanup;
+
 EXTERN_C_END

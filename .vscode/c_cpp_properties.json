@@ -5,6 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.19041.0\\km",
+                "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.19041.0\\um",
                 "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\wdf\\kmdf\\1.15",
                 "${workspaceFolder}/AudioRouter/x64/Debug"
             ],
@@ -12,10 +13,11 @@
                 "_DEBUG",
                 "UNICODE",
                 "_UNICODE",
+                "WINNT",
+                "WPP_BIT_1",
                 "TRACE_DRIVER",
                 "TRACE_QUEUE",
-                "TRACE_DEVICE",
-                "_WINNT_"
+                "TRACE_DEVICE"
             ],
             "windowsSdkVersion": "10.0.19041.0",
             "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Tools/MSVC/14.29.30133/bin/Hostx64/x64/cl.exe",

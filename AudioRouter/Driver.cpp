@@ -23,6 +23,12 @@ Environment:
 #pragma alloc_text (PAGE, AudioRouterEvtDriverContextCleanup)
 #endif
 
+void log_err_driver(const char* call, const char* func, unsigned int line, NTSTATUS status)
+{
+    TraceEvents(TRACE_LEVEL_ERROR, TRACE_DRIVER, "%s in %s (%s:%d) failed with status %!STATUS!", call, func, __FILE__, line, status);
+}
+#define TRY(expr) { NTSTATUS status = (expr); if (!NT_SUCCESS(status)) { log_err_driver(#expr, __FUNCTION__, __LINE__, status); return status; } }
+
 /**
  * @brief initializes the driver
  *
@@ -42,27 +48,20 @@ Environment:
  */
 NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING RegistryPath)
 {
-    WDF_DRIVER_CONFIG config;
-    NTSTATUS status;
-    WDF_OBJECT_ATTRIBUTES attributes;
-
     WPP_INIT_TRACING(DriverObject, RegistryPath);
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Entry");
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "<%!FUNC! RegistryPath=%wZ>", RegistryPath);
 
     // Register a cleanup callback so that we can call WPP_CLEANUP when
     // the framework driver object is deleted during driver unload.
+    WDF_OBJECT_ATTRIBUTES attributes;
     WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
     attributes.EvtCleanupCallback = AudioRouterEvtDriverContextCleanup;
 
+    WDF_DRIVER_CONFIG config;
     WDF_DRIVER_CONFIG_INIT(&config, AudioRouterEvtDeviceAdd);
 
-    status = WdfDriverCreate(DriverObject,
-                             RegistryPath,
-                             &attributes,
-                             &config,
-                             WDF_NO_HANDLE
-                            );
+    NTSTATUS status = WdfDriverCreate(DriverObject, RegistryPath, &attributes, &config, WDF_NO_HANDLE);
 
     if (!NT_SUCCESS(status))
     {
@@ -71,7 +70,7 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING Regi
         return status;
     }
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit");
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "</%!FUNC!>");
 
     return status;
 }
@@ -89,19 +88,17 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject, _In_ PUNICODE_STRING Regi
  */
 NTSTATUS AudioRouterEvtDeviceAdd(_In_ WDFDRIVER Driver, _Inout_ PWDFDEVICE_INIT DeviceInit)
 {
-    NTSTATUS status;
-
     UNREFERENCED_PARAMETER(Driver);
 
     PAGED_CODE();
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Entry");
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "<%!FUNC!>");
 
-    status = AudioRouterCreateDevice(DeviceInit);
+    TRY(AudioRouterCreateDevice(DeviceInit));
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Exit");
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "</%!FUNC!>");
 
-    return status;
+    return STATUS_SUCCESS;
 }
 
 /**
@@ -113,7 +110,7 @@ VOID AudioRouterEvtDriverContextCleanup(_In_ WDFOBJECT DriverObject)
 {
     PAGED_CODE();
 
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "%!FUNC! Entry");
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "<%!FUNC!/>");
 
     // Stop WPP Tracing
     WPP_CLEANUP(WdfDriverWdmGetDriverObject((WDFDRIVER)DriverObject));

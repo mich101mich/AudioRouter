@@ -38,9 +38,9 @@
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Device.c" />
-    <ClCompile Include="Driver.c" />
-    <ClCompile Include="Queue.c" />
+    <ClCompile Include="Device.cpp" />
+    <ClCompile Include="Driver.cpp" />
+    <ClCompile Include="Queue.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Device.h" />
