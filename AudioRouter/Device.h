@@ -13,8 +13,9 @@ Environment:
     Kernel-mode Driver Framework
 
 --*/
+#pragma once
 
-#include "public.h"
+#include "Prelude.h"
 
 EXTERN_C_START
 

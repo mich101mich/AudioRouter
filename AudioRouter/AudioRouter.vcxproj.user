@@ -11,8 +11,13 @@
     <DeployFiles />
     <ScriptName>Microsoft.DriverKit.DefaultDriverPackageInstallationClass.PerformDefaultDriverPackageInstallation</ScriptName>
     <ScriptDeviceQuery />
-    <DebuggerFlavor>DbgengRemoteDebugger</DebuggerFlavor>
+    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <DbgengRemoteCommand>C:\DriverTest\Drivers\AudioRouterApp.exe</DbgengRemoteCommand>
     <DbgengRemoteWorkingDirectory>C:\DriverTest\Drivers</DbgengRemoteWorkingDirectory>
+    <EnableVerifier>False</EnableVerifier>
+    <AllDrivers>False</AllDrivers>
+    <VerifyProjectOutput>True</VerifyProjectOutput>
+    <VerifyDrivers />
+    <VerifyFlags>133563</VerifyFlags>
   </PropertyGroup>
 </Project>

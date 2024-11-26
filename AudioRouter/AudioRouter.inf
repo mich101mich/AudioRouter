@@ -52,9 +52,9 @@ ErrorControl = 1 ; SERVICE_ERROR_NORMAL
 ServiceBinary = %12%\AudioRouter.sys ; path to binary, number must match [DestinationDirs]/DefaultDestDir
 
 [AudioRouter_Device.NT$ARCH$.Interfaces]
-AddInterface=%KSCATEGORY_AUDIO%, "WaveSpeaker", AudioRouter.Interface.WaveSpeaker
-AddInterface=%KSCATEGORY_RENDER%, "WaveSpeaker", AudioRouter.Interface.WaveSpeaker
-AddInterface=%KSCATEGORY_REALTIME%, "WaveSpeaker", AudioRouter.Interface.WaveSpeaker
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_WaveSpeaker%, AudioRouter.Interface.WaveSpeaker
+AddInterface=%KSCATEGORY_RENDER%, %KSNAME_WaveSpeaker%, AudioRouter.Interface.WaveSpeaker
+AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_WaveSpeaker%, AudioRouter.Interface.WaveSpeaker
 
 [AudioRouter.Interface.WaveSpeaker]
 AddReg = AudioRouter.Interface.WaveSpeaker.AddReg
@@ -65,12 +65,16 @@ HKR,,FriendlyName,,%AudioRouter.WaveSpeaker.szPname%
 
 
 [Strings]
+; configurable
 ManufacturerName = "mich101mich"
 DiskName = "AudioRouter Installation Disk"
 DeviceDescription = "AudioRouter Device"
 ServiceName = "AudioRouter Service"
 ServiceDescription = "Provides Audio interfaces with internal routing capabilities"
 AudioRouter.WaveSpeaker.szPname = "AudioRouter WaveSpeaker"
+
+; must match code
+KSNAME_WaveSpeaker = "WaveSpeaker"
 
 ; external constants
 Proxy.CLSID="{17CCA71B-ECD7-11D0-B908-00A0C9223196}"

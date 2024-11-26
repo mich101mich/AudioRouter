@@ -14,8 +14,10 @@ Environment:
 
 --*/
 
-#include "driver.h"
-#include "queue.tmh"
+#include "Queue.h"
+#include "Queue.tmh"
+
+#include "Prelude.h"
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (PAGE, AudioRouterQueueInitialize)
@@ -26,6 +28,7 @@ void log_err_queue(const char* call, const char* func, unsigned int line, NTSTAT
     TraceEvents(TRACE_LEVEL_ERROR, TRACE_QUEUE, "%s in %s (%s:%d) failed with status %!STATUS!", call, func, __FILE__, line, status);
 }
 #define TRY(expr) { NTSTATUS status = (expr); if (!NT_SUCCESS(status)) { log_err_queue(#expr, __FUNCTION__, __LINE__, status); return status; } }
+#define TRY_CLEAN(expr, clean) { NTSTATUS status = (expr); if (!NT_SUCCESS(status)) { log_err_queue(#expr, __FUNCTION__, __LINE__, status); clean; return status; } }
 
 void ClearContext(PQUEUE_CONTEXT context)
 {

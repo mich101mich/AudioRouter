@@ -51,9 +51,11 @@
         "_70_new": "cpp",
         "_70_xstddef": "cpp",
         "vector": "cpp",
-        "strstream": "cpp"
+        "strstream": "cpp",
+        "forward_list": "cpp"
     },
     "cSpell.words": [
-        "NTSTATUS"
+        "NTSTATUS",
+        "Subdevice"
     ]
 }

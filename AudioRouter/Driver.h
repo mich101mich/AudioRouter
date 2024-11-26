@@ -13,14 +13,9 @@ Environment:
     Kernel-mode Driver Framework
 
 --*/
+#pragma once
 
-#include <ntddk.h>
-#include <wdf.h>
-#include <initguid.h>
-
-#include "device.h"
-#include "queue.h"
-#include "trace.h"
+#include "Prelude.h"
 
 EXTERN_C_START
 
@@ -31,5 +26,9 @@ EXTERN_C_START
 DRIVER_INITIALIZE DriverEntry;
 EVT_WDF_DRIVER_DEVICE_ADD AudioRouterEvtDeviceAdd;
 EVT_WDF_OBJECT_CONTEXT_CLEANUP AudioRouterEvtDriverContextCleanup;
+
+DRIVER_ADD_DEVICE AudioRouterAddDevice;
+NTSTATUS AudioRouterStartDevice(PDEVICE_OBJECT, PIRP, PRESOURCELIST);
+_Dispatch_type_(IRP_MJ_PNP) DRIVER_DISPATCH PnpHandler;
 
 EXTERN_C_END

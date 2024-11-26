@@ -14,8 +14,10 @@ Environment:
 
 --*/
 
-#include "driver.h"
-#include "device.tmh"
+#include "Device.h"
+#include "Device.tmh"
+
+#include "Prelude.h"
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text (PAGE, AudioRouterCreateDevice)
@@ -26,6 +28,7 @@ void log_err_device(const char* call, const char* func, unsigned int line, NTSTA
     TraceEvents(TRACE_LEVEL_ERROR, TRACE_DEVICE, "%s in %s (%s:%d) failed with status %!STATUS!", call, func, __FILE__, line, status);
 }
 #define TRY(expr) { NTSTATUS status = (expr); if (!NT_SUCCESS(status)) { log_err_device(#expr, __FUNCTION__, __LINE__, status); return status; } }
+#define TRY_CLEAN(expr, clean) { NTSTATUS status = (expr); if (!NT_SUCCESS(status)) { log_err_device(#expr, __FUNCTION__, __LINE__, status); clean; return status; } }
 
 NTSTATUS AudioRouterCreateDevice(_Inout_ PWDFDEVICE_INIT DeviceInit)
 {

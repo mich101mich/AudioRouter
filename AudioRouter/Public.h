@@ -14,6 +14,9 @@ Environment:
     user and kernel
 
 --*/
+#pragma once
+
+#include <initguid.h>
 
 //
 // Define an Interface Guid so that apps can find the device and talk to it.
