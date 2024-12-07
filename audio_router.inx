@@ -1,0 +1,60 @@
+;===================================================================
+; AudioRouter Driver
+;===================================================================
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = MEDIA
+ClassGuid   = {4d36e96c-e325-11ce-bfc1-08002be10318} ; must match the Class above
+Provider    = %ProviderString%
+PnpLockDown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13 ; 12=Windows\System32\Drivers, 13=??. Must match [AudioRouter_Service_Install]/ServiceBinary
+
+[SourceDisksNames]
+1 = %DiskName%,,,"" ; defines a disk named '1' with a user-friendly label
+
+[SourceDisksFiles]
+audio_router.sys = 1,, ; what disk number from [SourceDisksNames] can the file be found on
+
+; ================= Install section =================
+
+; NOTE: OS/architecture specifier ".NT$ARCH$" just inserts the current development target and is
+;       thus mostly useless, but some windows(server) versions require it => just put it everywhere
+
+[Manufacturer]
+%ManufacturerName%=Standard,NT$ARCH$ ; defines a manufacturer with name %ManufacturerName% and corresponding Models section [Standard.NT$ARCH$]
+
+[Standard.NT$ARCH$]
+%DeviceDescription%=AudioRouter_Device, root\AudioRouter ; defines a device with name %DeviceDescription% and corresponding DDInstall section [AudioRouter_Device] and hw-id Root\AudioRouter
+
+[AudioRouter_Device.NT$ARCH$]
+CopyFiles=Drivers_Dir ; defines a section [Drivers_Dir] that contains a list of files to copy
+
+[Drivers_Dir] ; section containing a list of files to copy
+audio_router.sys
+
+; ================= Service installation =================
+[AudioRouter_Device.NT$ARCH$.Services]
+AddService = AudioRouterService, 0x2, AudioRouter_Service_Install ; defines a service.
+; Parameters: AudioRouter = name of the service (must be system-unique)
+;             0x2 = flags. 0x2 means set service as default for this driver
+;             Service_Install = name of the section that contains the service's install parameters
+
+[AudioRouter_Service_Install]
+DisplayName    = %ServiceName%
+Description    = %ServiceDescription%
+ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
+StartType      = 3               ; SERVICE_DEMAND_START 
+ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %13%\audio_router.sys ; path to binary, number must match [DestinationDirs]/DefaultDestDir
+
+; ================= Strings =================
+[Strings]
+ProviderString         = "mich101mich"
+ManufacturerName       = "mich101mich"
+DiskName               = "AudioRouter Installation Disk"
+DeviceDescription      = "AudioRouter Device"
+ServiceName            = "AudioRouter Service"
+ServiceDescription     = "Provides Audio interfaces with internal routing capabilities"
